@@ -1,6 +1,7 @@
 package cbor_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -95,4 +96,65 @@ func TestCodec_Decode(t *testing.T) {
 		assert.Nil(t, decoded)
 		assert.True(t, codec.IsErrMsgUnmarshal(err))
 	})
+}
+
+func BenchmarkCodec_Encode(b *testing.B) {
+	cborCodec := cbor.NewCodec()
+
+	blockProposalData := unittest.ProposalFixture()
+	b.Run(fmt.Sprintf("cbor_encode_block_proposal"), func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			_, err := cborCodec.Encode(blockProposalData)
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	})
+
+	execReceiptData := unittest.ExecutionReceiptFixture(unittest.WithResult(unittest.ExecutionResultFixture()))
+	b.Run(fmt.Sprintf("cbor_encode_execution_receipt"), func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			_, err := cborCodec.Encode(execReceiptData)
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	})
+
+	//TODO: Add another inputs for benchmarking if needed
+}
+
+func BenchmarkCodec_Decode(b *testing.B) {
+	cborCodec := cbor.NewCodec()
+	blockProposalData := unittest.ProposalFixture()
+	blockProposalDataEncoded, err := cborCodec.Encode(blockProposalData)
+	if err != nil {
+		b.Error(err)
+	}
+
+	b.Run(fmt.Sprintf("cbor_decode_block_proposal"), func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			_, err = cborCodec.Decode(blockProposalDataEncoded)
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	})
+
+	execReceiptData := unittest.ExecutionReceiptFixture(unittest.WithResult(unittest.ExecutionResultFixture()))
+	execReceiptDataEncoded, err := cborCodec.Encode(execReceiptData)
+	if err != nil {
+		b.Error(err)
+	}
+
+	b.Run(fmt.Sprintf("cbor_decode_execution_receipt"), func(b *testing.B) {
+		for n := 0; n < b.N; n++ {
+			_, err = cborCodec.Decode(execReceiptDataEncoded)
+			if err != nil {
+				b.Error(err)
+			}
+		}
+	})
+
+	//TODO: Add another inputs for benchmarking  if needed
 }
