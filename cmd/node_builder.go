@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/onflow/flow-go/network/codec/cbor"
 	"os"
 	"path/filepath"
 	"time"
@@ -24,7 +25,6 @@ import (
 	"github.com/onflow/flow-go/module/profiler"
 	"github.com/onflow/flow-go/module/updatable_configs"
 	"github.com/onflow/flow-go/network"
-	"github.com/onflow/flow-go/network/codec/cbor"
 	"github.com/onflow/flow-go/network/p2p"
 	"github.com/onflow/flow-go/state/protocol"
 	"github.com/onflow/flow-go/state/protocol/events"
@@ -242,13 +242,15 @@ type StateExcerptAtBoot struct {
 	LastFinalizedHeader *flow.Header // last finalized header when the node boots up
 }
 
-func DefaultBaseConfig() *BaseConfig {
+func DefaultBaseConfig(logger zerolog.Logger) *BaseConfig {
 	homedir, _ := os.UserHomeDir()
 	datadir := filepath.Join(homedir, ".flow", "database")
 
 	// NOTE: if the codec used in the network component is ever changed any code relying on
 	// the message format specific to the codec must be updated. i.e: the AuthorizedSenderValidator.
-	codecFactory := func() network.Codec { return cbor.NewCodec() }
+	//TODO: Change back
+	codecFactory := func() network.Codec { return cbor.NewCodec().WithLogger(&logger) }
+	//codecFactory := func() network.Codec { return json.NewCodec().WithLogger(&logger) }
 
 	return &BaseConfig{
 		nodeIDHex:        NotSet,

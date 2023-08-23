@@ -41,7 +41,6 @@ import (
 	alspmgr "github.com/onflow/flow-go/network/alsp/manager"
 	netcache "github.com/onflow/flow-go/network/cache"
 	"github.com/onflow/flow-go/network/channels"
-	cborcodec "github.com/onflow/flow-go/network/codec/cbor"
 	"github.com/onflow/flow-go/network/converter"
 	"github.com/onflow/flow-go/network/p2p"
 	"github.com/onflow/flow-go/network/p2p/cache"
@@ -371,7 +370,7 @@ func (builder *FollowerServiceBuilder) initNetwork(nodeID module.Local,
 ) (*p2p.Network, error) {
 	net, err := p2p.NewNetwork(&p2p.NetworkConfig{
 		Logger:              builder.Logger,
-		Codec:               cborcodec.NewCodec(),
+		Codec:               builder.CodecFactory(),
 		Me:                  nodeID,
 		MiddlewareFactory:   func() (network.Middleware, error) { return builder.Middleware, nil },
 		Topology:            topology,

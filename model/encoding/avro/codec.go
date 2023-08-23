@@ -1,8 +1,7 @@
-package capnp
+package avro
 
 import (
-	"capnproto.org/go/capnp/v3"
-	"errors"
+	"github.com/linkedin/goavro/v2"
 	"github.com/onflow/flow-go/model/encoding"
 	"io"
 )
@@ -11,34 +10,18 @@ var _ encoding.Marshaler = (*Marshaler)(nil)
 
 type Marshaler struct{}
 
-func NewMarshaler() *Marshaler {
-	return &Marshaler{}
-}
-
 func (m Marshaler) Marshal(i interface{}) ([]byte, error) {
-	msg, err := convertToCapnpMessage(i)
-	if err != nil {
-		return nil, err
-	}
-
-	bytes, err := msg.Marshal()
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
+	//TODO implement me
+	panic("implement me")
 }
 
 func (m Marshaler) Unmarshal(bytes []byte, i interface{}) error {
-	if _, ok := i.(*capnp.Message); !ok {
-		return errors.New("conversion to *capnp.Message failed")
-	}
+	//TODO implement me
+	panic("implement me")
+}
 
-	i, err := capnp.Unmarshal(bytes)
-	if err != nil {
-		return err
-	}
-	return nil
+func NewMarshaler() *Marshaler {
+	return &Marshaler{}
 }
 
 func (m Marshaler) MustMarshal(i interface{}) []byte {
@@ -60,49 +43,50 @@ func (m Marshaler) MustUnmarshal(bytes []byte, i interface{}) {
 var _ encoding.Codec = (*Codec)(nil)
 
 type Codec struct {
-	IsPacked bool
+	schema string
+}
+
+func NewCodec(schema string) *Codec {
+	return &Codec{schema: schema}
 }
 
 func (c *Codec) NewEncoder(w io.Writer) encoding.Encoder {
-	if c.IsPacked {
-		return &Encoder{capnp.NewPackedEncoder(w)}
+	codec, err := goavro.NewCodec(c.schema)
+	if err != nil {
+		panic(err)
 	}
 
-	return &Encoder{capnp.NewEncoder(w)}
+	return &Encoder{
+		codec: codec,
+		w:     w,
+	}
 }
 
 func (c *Codec) NewDecoder(r io.Reader) encoding.Decoder {
-	if c.IsPacked {
-		return &Decoder{capnp.NewPackedDecoder(r)}
+	codec, err := goavro.NewCodec(c.schema)
+	if err != nil {
+		panic(err)
 	}
 
-	return &Decoder{capnp.NewDecoder(r)}
+	return &Decoder{
+		codec: codec,
+		r:     r,
+	}
 }
 
 type Encoder struct {
-	encoder *capnp.Encoder
+	codec *goavro.Codec
+	w     io.Writer
 }
 
 func (e *Encoder) Encode(v interface{}) error {
-	msg, err := convertToCapnpMessage(v)
+	var data []byte
+	data, err := e.codec.BinaryFromNative(data, v)
 	if err != nil {
 		return err
 	}
 
-	return e.encoder.Encode(msg)
-}
-
-type Decoder struct {
-	decoder *capnp.Decoder
-}
-
-func (e *Decoder) Decode(v interface{}) error {
-	_, err := convertToCapnpMessage(v)
-	if err != nil {
-		return err
-	}
-
-	v, err = e.decoder.Decode()
+	_, err = e.w.Write(data)
 	if err != nil {
 		return err
 	}
@@ -110,10 +94,40 @@ func (e *Decoder) Decode(v interface{}) error {
 	return nil
 }
 
-func convertToCapnpMessage(data interface{}) (*capnp.Message, error) {
-	if msg, ok := data.(*capnp.Message); ok {
-		return msg, nil
+type Decoder struct {
+	codec *goavro.Codec
+	r     io.Reader
+}
+
+func (e *Decoder) Decode(v interface{}) error {
+	data := make([]byte, 512)
+	totalRead := 0
+
+	for totalRead < len(data) {
+		n, err := e.r.Read(data[totalRead:])
+		if err != nil {
+			return err
+		}
+
+		totalRead += n
+
+		// If n is less than len(data) - totalRead, there is more data to read
+		if totalRead >= len(data) {
+			// Grow the data buffer and continue reading
+			newData := make([]byte, len(data)*2) // Double the buffer size
+			copy(newData, data)
+			data = newData
+		} else {
+			// Trim data to the actual length of the content
+			data = data[:totalRead]
+		}
 	}
 
-	return nil, errors.New("conversion of interface to *capnp.Message failed")
+	// Decode the data using the Avro codec
+	v, _, err := e.codec.NativeFromBinary(data)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

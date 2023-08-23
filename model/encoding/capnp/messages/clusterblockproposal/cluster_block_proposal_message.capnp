@@ -1,9 +1,10 @@
 using Go = import "/go.capnp";
-using TBM = import "/transaction_body_message.capnp";
+using Transaction = import "/messages/transactionbody/transaction_body_message.capnp";
 @0x9e050064d5c9cb20;
 $Go.package("capnp");
-$Go.import("flow-go/model/encoding/capnp/");
+$Go.import("github.com/onflow/flow-go/model/encoding/capnp/messages/clusterblockproposal");
 
+using Collection = List(Transaction.TransactionBodyMessage);
 using Signature = Data;
 
 struct QuorumCertificateMessage {
@@ -26,9 +27,9 @@ struct HeaderMessage {
     parentID @1 :Data;
     height @2 :UInt64;
     payloadHash @3 :Data;
-    timestamp @4 :UInt64;
+    timestamp @4 :Int64;
     view @5 :UInt64;
-    heParentViewight @6 :UInt64;
+    parentView @6 :UInt64;
     parentVoterIndices @7 :Data;
     parentVoterSigData @8 :Data;
     proposerID @9 :Data;
@@ -37,7 +38,7 @@ struct HeaderMessage {
 }
 
 struct UntrustedClusterBlockPayloadMessage {
-    collection @0 :List(TBM.TransactionBodyMessage);
+    collection @0 :Collection;
     referenceBlockID @1 :Data;
 }
 

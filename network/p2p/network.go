@@ -426,6 +426,7 @@ func (n *Network) UnicastOnChannel(channel channels.Channel, payload interface{}
 		return nil
 	}
 
+	n.logger.Debug().Msg("Network::UnicastOnChannel Encoding Started!")
 	msg, err := network.NewOutgoingScope(
 		flow.IdentifierList{targetID},
 		channel,
@@ -504,6 +505,8 @@ func (n *Network) sendOnChannel(channel channels.Channel, msg interface{}, targe
 		Str("channel", channel.String()).
 		Str("target_ids", fmt.Sprintf("%v", targetIDs)).
 		Msg("sending new message on channel")
+
+	n.logger.Debug().Msg("Network::sendOnChannel Encoding Started!")
 
 	// generate network message (encoding) based on list of recipients
 	scope, err := network.NewOutgoingScope(targetIDs, channel, msg, n.codec.Encode, message.ProtocolTypePubSub)

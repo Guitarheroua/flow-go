@@ -137,7 +137,7 @@ func (fnb *FlowNodeBuilder) BaseFlags() {
 	// initialize pflag set for Flow node
 	config.InitializePFlagSet(fnb.flags, defaultFlowConfig)
 
-	defaultConfig := DefaultBaseConfig()
+	defaultConfig := DefaultBaseConfig(fnb.Logger)
 
 	// bind configuration parameters
 	fnb.flags.StringVar(&fnb.BaseConfig.nodeIDHex, "nodeid", defaultConfig.nodeIDHex, "identity of our node")
@@ -1680,7 +1680,8 @@ func WithDB(db *badger.DB) Option {
 
 // FlowNode creates a new Flow node builder with the given name.
 func FlowNode(role string, opts ...Option) *FlowNodeBuilder {
-	config := DefaultBaseConfig()
+	logger := zerolog.New(os.Stderr)
+	config := DefaultBaseConfig(logger)
 	config.NodeRole = role
 	for _, opt := range opts {
 		opt(config)
@@ -1689,7 +1690,7 @@ func FlowNode(role string, opts ...Option) *FlowNodeBuilder {
 	builder := &FlowNodeBuilder{
 		NodeConfig: &NodeConfig{
 			BaseConfig:              *config,
-			Logger:                  zerolog.New(os.Stderr),
+			Logger:                  logger,
 			PeerManagerDependencies: NewDependencyList(),
 			ConfigManager:           updatable_configs.NewManager(),
 		},

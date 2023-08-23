@@ -696,7 +696,10 @@ func (m *Middleware) processAuthenticatedMessage(msg *message.Message, peerID pe
 	}
 
 	channel := channels.Channel(msg.ChannelID)
+
+	m.log.Debug().Msg("Middleware::processAuthenticatedMessage Decoding Started!")
 	decodedMsgPayload, err := m.codec.Decode(msg.Payload)
+
 	switch {
 	case codec.IsErrUnknownMsgCode(err):
 		// slash peer if message contains unknown message code byte

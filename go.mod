@@ -98,8 +98,10 @@ require (
 )
 
 require (
+	capnproto.org/go/capnp/v3 v3.0.0-alpha-29
 	github.com/coreos/go-semver v0.3.0
 	github.com/go-playground/validator/v10 v10.14.1
+	github.com/linkedin/goavro/v2 v2.12.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onflow/wal v0.0.0-20230529184820-bc9f8244608d
 	github.com/slok/go-http-metrics v0.10.0
@@ -282,4 +284,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
+	zenhack.net/go/util v0.0.0-20230414204917-531d38494cf5 // indirect
 )
