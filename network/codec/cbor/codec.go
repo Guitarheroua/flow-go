@@ -5,7 +5,10 @@ package cbor
 import (
 	"bytes"
 	"fmt"
+	"github.com/rs/zerolog"
 	"io"
+	"math/rand"
+	"time"
 
 	"github.com/fxamacker/cbor/v2"
 
@@ -19,11 +22,17 @@ var defaultDecMode, _ = cbor.DecOptions{ExtraReturnErrors: cbor.ExtraDecErrorUnk
 
 // Codec represents a CBOR codec for our network.
 type Codec struct {
+	l *zerolog.Logger
 }
 
 // NewCodec creates a new CBOR codec.
 func NewCodec() *Codec {
 	c := &Codec{}
+	return c
+}
+
+func (c *Codec) WithLogger(l *zerolog.Logger) *Codec {
+	c.l = l
 	return c
 }
 
@@ -47,7 +56,10 @@ func (c *Codec) NewDecoder(r io.Reader) network.Decoder {
 // NOTE: 'envelope' contains 'code' & serialized / encoded 'v'.
 // i.e.  1st byte is 'code' and remaining bytes are CBOR encoded 'v'.
 func (c *Codec) Encode(v interface{}) ([]byte, error) {
-
+	var start time.Time
+	if c.l != nil {
+		start = time.Now()
+	}
 	// encode the value
 	code, what, err := codec.MessageCodeFromInterface(v)
 	if err != nil {
@@ -74,6 +86,18 @@ func (c *Codec) Encode(v interface{}) ([]byte, error) {
 
 	dataBytes := data.Bytes()
 
+	var duration time.Duration
+	if c.l != nil {
+		duration = time.Since(start)
+	}
+
+	byteUUID := generateOneByteUUID()
+	dataBytes = append(dataBytes, byteUUID)
+
+	if c.l != nil {
+		c.l.Debug().Msg(fmt.Sprintf("CBOR: Execution of Encode took: %s for %s with size: %d bytes.", duration, fmt.Sprintf("1-byte UUID: 0x%02X\n", byteUUID), data.Len()))
+	}
+
 	return dataBytes, nil
 }
 
@@ -89,6 +113,10 @@ func (c *Codec) Encode(v interface{}) ([]byte, error) {
 //   - codec.ErrUnknownMsgCode if message code byte does not match any of the configured message codes.
 //   - codec.ErrMsgUnmarshal if the codec fails to unmarshal the data to the message type denoted by the message code.
 func (c *Codec) Decode(data []byte) (interface{}, error) {
+	var start time.Time
+	if c.l != nil {
+		start = time.Now()
+	}
 
 	msgCode, err := codec.MessageCodeFromPayload(data)
 	if err != nil {
@@ -106,11 +134,31 @@ func (c *Codec) Decode(data []byte) (interface{}, error) {
 
 	// unmarshal the payload
 	//bs2 := binstat.EnterTimeVal(fmt.Sprintf("%s%s%s:%d", binstat.BinNet, ":wire>4(cbor)", what, code), int64(len(data))) // e.g. ~3net:wire>4(cbor)CodeEntityRequest:23
-	err = defaultDecMode.Unmarshal(data[1:], msgInterface) // all but first byte
+	err = defaultDecMode.Unmarshal(data[1:len(data)-1], msgInterface) // all but first byte
 	//binstat.Leave(bs2)
 	if err != nil {
 		return nil, codec.NewMsgUnmarshalErr(data[0], what, err)
 	}
 
+	var duration time.Duration
+	if c.l != nil {
+		duration = time.Since(start)
+	}
+
+	byteUUID := data[len(data)-1]
+	data = data[:len(data)-1]
+
+	if c.l != nil {
+		c.l.Debug().Msg(fmt.Sprintf("CBOR: Execution of Decode took: %s for %s with size: %d bytes.", duration, fmt.Sprintf("1-byte UUID: 0x%02X\n", byteUUID), len(data)))
+	}
+
 	return msgInterface, nil
+}
+
+func generateOneByteUUID() byte {
+	// Seed the random number generator
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	// Generate a random byte value
+	return byte(r.Intn(256))
 }

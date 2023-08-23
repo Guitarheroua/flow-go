@@ -1,22 +1,21 @@
-package cbor_test
+package json
 
 import (
 	"fmt"
 	"github.com/onflow/flow-go/model/cluster"
 	"github.com/onflow/flow-go/model/messages"
+	"github.com/onflow/flow-go/network/codec"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
 
-	"github.com/onflow/flow-go/network/codec"
-	"github.com/onflow/flow-go/network/codec/cbor"
 	"github.com/onflow/flow-go/utils/unittest"
 )
 
 func TestCodec_Decode(t *testing.T) {
 	t.Parallel()
 
-	c := cbor.NewCodec()
+	c := NewCodec()
 
 	t.Run("decodes message successfully", func(t *testing.T) {
 		t.Parallel()
@@ -69,48 +68,19 @@ func TestCodec_Decode(t *testing.T) {
 		assert.Nil(t, decoded)
 		assert.True(t, codec.IsErrMsgUnmarshal(err))
 	})
-
-	t.Run("returns error when unmarshalling fails - wrong type", func(t *testing.T) {
-		t.Parallel()
-
-		data := unittest.ProposalFixture()
-		encoded, err := c.Encode(data)
-		require.NoError(t, err)
-
-		encoded[0] = codec.CodeCollectionGuarantee.Uint8()
-
-		decoded, err := c.Decode(encoded)
-		assert.Nil(t, decoded)
-		assert.True(t, codec.IsErrMsgUnmarshal(err))
-	})
-
-	t.Run("returns error when unmarshalling fails - corrupt", func(t *testing.T) {
-		t.Parallel()
-
-		data := unittest.ProposalFixture()
-		encoded, err := c.Encode(data)
-		require.NoError(t, err)
-
-		encoded[2] = 0x20 // corrupt payload
-
-		decoded, err := c.Decode(encoded)
-		assert.Nil(t, decoded)
-		assert.True(t, codec.IsErrMsgUnmarshal(err))
-	})
 }
 
 func BenchmarkCodec_Encode(b *testing.B) {
-	cborCodec := cbor.NewCodec()
-
+	codec := NewCodec()
 	transactionBody := unittest.TransactionBodyFixture()
-	transactionBodyEncoded, err := cborCodec.Encode(&transactionBody)
+	jsonBuffer, err := codec.Encode(&transactionBody)
 	require.NoError(b, err)
-	b.Logf("Size of TransactionBody encoded: %d bytes\n", len(transactionBodyEncoded))
+	b.Logf("Size of TransactionBody encoded: %decoder bytes\n", len(jsonBuffer))
 
 	b.Run(fmt.Sprintf("encode_transaction_body"), func(b *testing.B) {
 		defer runCleanTimer(b)
 		for n := 0; n < b.N; n++ {
-			_, err := cborCodec.Encode(&transactionBody)
+			_, err := codec.Encode(&transactionBody)
 			if err != nil {
 				b.Error(err)
 			}
@@ -120,14 +90,14 @@ func BenchmarkCodec_Encode(b *testing.B) {
 	numberOfPayloads := [3]int{5, 15, 30}
 	for _, n := range numberOfPayloads {
 		clusterBlockProposalData := ClusterBlockFixture(n)
-		clusterBlockProposalEncodedData, err := cborCodec.Encode(clusterBlockProposalData)
+		jsonBuffer, err = codec.Encode(clusterBlockProposalData)
 		require.NoError(b, err)
-		b.Logf("Size of ClusterBlockProposal with %d payloads encoded: %d bytes\n", n, len(clusterBlockProposalEncodedData))
+		b.Logf("Size of ClusterBlockProposal with %decoder payloads encoded: %decoder bytes\n", n, len(jsonBuffer))
 
-		b.Run(fmt.Sprintf("encode_cluster_block_with_payload_number_%d", n), func(b *testing.B) {
+		b.Run(fmt.Sprintf("encode_cluster_block_with_payload_number_%decoder", n), func(b *testing.B) {
 			defer runCleanTimer(b)
 			for n := 0; n < b.N; n++ {
-				_, err := cborCodec.Encode(clusterBlockProposalData)
+				_, err = codec.Encode(clusterBlockProposalData)
 				if err != nil {
 					b.Error(err)
 				}
@@ -137,17 +107,16 @@ func BenchmarkCodec_Encode(b *testing.B) {
 }
 
 func BenchmarkCodec_Decode(b *testing.B) {
-	cborCodec := cbor.NewCodec()
-
+	codec := NewCodec()
 	transactionBody := unittest.TransactionBodyFixture()
-	transactionBodyEncoded, err := cborCodec.Encode(&transactionBody)
+	jsonBuffer, err := codec.Encode(&transactionBody)
 	require.NoError(b, err)
-	b.Logf("Size of TransactionBody encoded: %d bytes\n", len(transactionBodyEncoded))
+	b.Logf("Size of TransactionBody encoded: %decoder bytes\n", len(jsonBuffer))
 
 	b.Run(fmt.Sprintf("decode_transaction_body"), func(b *testing.B) {
 		defer runCleanTimer(b)
 		for n := 0; n < b.N; n++ {
-			_, err := cborCodec.Decode(transactionBodyEncoded)
+			_, err = codec.Decode(jsonBuffer)
 			if err != nil {
 				b.Error(err)
 			}
@@ -157,14 +126,14 @@ func BenchmarkCodec_Decode(b *testing.B) {
 	numberOfPayloads := [3]int{5, 15, 30}
 	for _, n := range numberOfPayloads {
 		clusterBlockProposalData := ClusterBlockFixture(n)
-		clusterBlockProposalEncodedData, err := cborCodec.Encode(clusterBlockProposalData)
+		jsonBuffer, err = codec.Encode(clusterBlockProposalData)
 		require.NoError(b, err)
-		b.Logf("Size of ClusterBlockProposal with %d payloads encoded: %d bytes\n", n, len(clusterBlockProposalEncodedData))
+		b.Logf("Size of ClusterBlockProposal with %decoder payloads encoded: %decoder bytes\n", n, len(jsonBuffer))
 
-		b.Run(fmt.Sprintf("decode_cluster_block_with_payload_number_%d", n), func(b *testing.B) {
+		b.Run(fmt.Sprintf("decode_cluster_block_with_payload_number_%decoder", n), func(b *testing.B) {
 			defer runCleanTimer(b)
 			for n := 0; n < b.N; n++ {
-				_, err := cborCodec.Decode(clusterBlockProposalEncodedData)
+				_, err = codec.Decode(jsonBuffer)
 				if err != nil {
 					b.Error(err)
 				}
