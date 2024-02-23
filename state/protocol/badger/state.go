@@ -3,9 +3,8 @@ package badger
 import (
 	"errors"
 	"fmt"
-	"sync/atomic"
-
 	"github.com/dgraph-io/badger/v2"
+	"sync/atomic"
 
 	"github.com/onflow/flow-go/consensus/hotstuff"
 	"github.com/onflow/flow-go/model/flow"
@@ -192,6 +191,8 @@ func Bootstrap(
 		if err != nil {
 			return fmt.Errorf("could not update epoch metrics: %w", err)
 		}
+
+		//TODO: Maybe log first time here
 		metrics.BlockSealed(lastSealed)
 		metrics.SealedHeight(lastSealed.Header.Height)
 		metrics.FinalizedHeight(lastFinalized.Header.Height)

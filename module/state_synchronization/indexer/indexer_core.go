@@ -93,6 +93,7 @@ func (c *IndexerCore) RegisterValue(ID flow.RegisterID, height uint64) (flow.Reg
 // Expected errors:
 // - storage.ErrNotFound if the block for execution data was not found
 func (c *IndexerCore) IndexBlockData(data *execution_data.BlockExecutionDataEntity) error {
+
 	block, err := c.headers.ByBlockID(data.BlockID)
 	if err != nil {
 		return fmt.Errorf("could not get the block by ID %s: %w", data.BlockID, err)
@@ -230,6 +231,7 @@ func (c *IndexerCore) IndexBlockData(data *execution_data.BlockExecutionDataEnti
 		return fmt.Errorf("failed to index block data at height %d: %w", block.Height, err)
 	}
 
+	lg.Debug().Msg(fmt.Sprintf("!!! The block was indexed at time: %s", time.Now().String()))
 	c.metrics.BlockIndexed(block.Height, time.Since(start), eventCount, registerCount, resultCount)
 	lg.Debug().
 		Dur("duration_ms", time.Since(start)).

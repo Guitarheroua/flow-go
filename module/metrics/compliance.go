@@ -173,12 +173,14 @@ func (cc *ComplianceCollector) BlockFinalized(block *flow.Block) {
 
 // SealedHeight sets the finalized height.
 func (cc *ComplianceCollector) SealedHeight(height uint64) {
+
 	cc.sealedHeight.Set(float64(height))
 }
 
 // BlockSealed reports metrics about sealed blocks.
 func (cc *ComplianceCollector) BlockSealed(block *flow.Block) {
 	cc.sealedBlocks.Inc()
+
 	cc.sealedPayload.With(prometheus.Labels{LabelResource: ResourceGuarantee}).Add(float64(len(block.Payload.Guarantees)))
 	cc.sealedPayload.With(prometheus.Labels{LabelResource: ResourceSeal}).Add(float64(len(block.Payload.Seals)))
 }

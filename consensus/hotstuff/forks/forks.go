@@ -439,6 +439,7 @@ func (f *Forks) checkForAdvancingFinalization(certifiedBlock *model.CertifiedBlo
 	// Advancing finalization step (iii): iterate over the blocks from (i) and emit finalization events
 	for _, b := range blocksToBeFinalized {
 		// first notify other critical components about finalized block - all errors returned here are fatal exceptions
+		//TODO Sealing started here
 		err = f.finalizationCallback.MakeFinal(b.BlockID)
 		if err != nil {
 			return fmt.Errorf("finalization error in other component: %w", err)

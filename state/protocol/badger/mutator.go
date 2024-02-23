@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/onflow/flow-go/utils/logging"
+	"time"
 
 	"github.com/dgraph-io/badger/v2"
 	"github.com/rs/zerolog"
@@ -628,6 +630,7 @@ func (m *FollowerState) evolveProtocolState(ctx context.Context, candidate *flow
 // Hence, the parent of `blockID` has to be the last finalized block.
 // No errors are expected during normal operations.
 func (m *FollowerState) Finalize(ctx context.Context, blockID flow.Identifier) error {
+
 	// preliminaries: start tracer and retrieve full block
 	span, _ := m.tracer.StartSpanFromContext(ctx, trace.ProtoStateMutatorFinalize)
 	defer span.End()
@@ -663,6 +666,7 @@ func (m *FollowerState) Finalize(ctx context.Context, blockID flow.Identifier) e
 	// We also want to update the last sealed height. Retrieve the block
 	// seal indexed for the block and retrieve the block that was sealed by it.
 	lastSeal, err := m.seals.HighestInFork(blockID)
+
 	if err != nil {
 		return fmt.Errorf("could not look up sealed header: %w", err)
 	}
@@ -799,12 +803,19 @@ func (m *FollowerState) Finalize(ctx context.Context, blockID flow.Identifier) e
 	// update sealed/finalized block metrics
 	m.metrics.FinalizedHeight(header.Height)
 	m.metrics.SealedHeight(sealed.Height)
+
 	m.metrics.BlockFinalized(block)
 	for _, seal := range block.Payload.Seals {
 		sealedBlock, err := m.blocks.ByID(seal.BlockID)
 		if err != nil {
 			return fmt.Errorf("could not retrieve sealed block (%x): %w", seal.BlockID, err)
 		}
+
+		lg := m.logger.With().
+			Hex("block_id", logging.ID(sealedBlock.ID())).
+			Uint64("height", sealedBlock.Header.Height).
+			Logger()
+		lg.Debug().Msg(fmt.Sprintf("!!! The block was sealed at time: %s", time.Now().String()))
 		m.metrics.BlockSealed(sealedBlock)
 	}
 
